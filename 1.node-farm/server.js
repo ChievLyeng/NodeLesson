@@ -14,7 +14,8 @@ const tempCard = fs.readFileSync(`${__dirname}/templates/template-card.html`,'ut
 const data = fs.readFileSync(`${__dirname}/dev-data/data.json`,'utf-8');
 const dataObj = JSON.parse(data);
 
-console.log(slugify("Fresh Avocado",{lower : true}));
+const slugs = dataObj.map( el => slugify(el.productName, {lower : true}));
+console.log(slugs);
 
 const server = http.createServer((req, res) => {
     
