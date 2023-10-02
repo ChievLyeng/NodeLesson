@@ -1,7 +1,10 @@
 const fs = require("fs");
 const crypto = require("crypto");
+
+
 const start = Date.now()
-process.env.UV_THREADPOOL_SIZE = 3; //change threadpool size
+process.env.UV_THREADPOOL_SIZE = 4
+; //change threadpool size
 
 
 setTimeout(() => console.log("Time 1 finishing"), 0);
@@ -50,3 +53,8 @@ fs.readFile("test-file.txt", () => {
 });
 
 console.log("Hello from the top-level code"); // Hello from the top-level code" is the first thing to be printed, as it's synchronous code executed immediately.
+
+
+
+
+
