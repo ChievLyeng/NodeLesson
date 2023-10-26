@@ -20,11 +20,38 @@ const Tour = require('../models/tourModel')
 // .catch((error) => {
 //   console.log("Error",error);
 // })
+
+
+
+// get allTours
 exports.getAllTours = async (req, res) => {
+
+  // build query
+  const queryObj = {...req.query}
+  const excludedFields = ['page','sort','limit','fields']
+  excludedFields.forEach(el => delete queryObj[el]); // loop to delete the excludedFields
+
+  const query = Tour.find(queryObj)
+  // console.log(req.query,queryObj);
   
   try{
-    const tours = await Tour.find();
+    // first solution of filter
+    // const tours = await Tour.find({
+    //   duration: 5,
+    //   difficulty: 'easy'
+    // });
 
+    // second solution of filter
+    // const tours = await Tour.find()
+    // .where('duration')
+    // .equals(5)
+    // .where('difficulty')
+    // .equals('easy')
+
+    // execute query
+    const tours = await query;
+    
+    // send response
     res.status(200).json({
       status: 'success',
       requestedAt: req.requestTime,
@@ -33,6 +60,7 @@ exports.getAllTours = async (req, res) => {
         tours
       }
     });
+
   }catch(err){
       res.status(400).json({
         status : "fail",
@@ -42,6 +70,7 @@ exports.getAllTours = async (req, res) => {
 
 };
 
+// get single Tour
 exports.getTour = async (req, res) => {
   
   try{
@@ -63,10 +92,9 @@ exports.getTour = async (req, res) => {
         message : "error fetching data"
       })
   }
-  
-
 };
 
+// create Tour
 exports.createTour = async (req, res) => {
   try{
     // console.log(req.body);
@@ -82,23 +110,57 @@ exports.createTour = async (req, res) => {
   }catch(err){
     res.status(400).json({
       status : 'fail',
-      message : 'Invalid data sent!'
+      message : err
     })
   }
 };
 
-exports.updateTour = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    data: {
-      tour: '<Updated tour here...>'
-    }
-  });
+// update single tour
+exports.updateTour = async (req, res) => {
+  try{
+      const tour = await Tour.findByIdAndUpdate(req.params.id, req.body,{
+        new : true,
+        runValidators: true
+      });
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          tour
+        }
+      });
+  }
+  catch(err){
+    res.status(400).json({
+        status : "fail",
+        message : "error fetching data"
+      })
+  }
 };
 
-exports.deleteTour = (req, res) => {
-  res.status(204).json({
-    status: 'success',
-    data: null
-  });
+//delete
+exports.deleteTour = async (req, res) => {
+  try {
+    const tour = await Tour.findByIdAndDelete(req.params.id);
+
+    if (!tour) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Tour not found',
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        tour // Return the deleted tour data
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: 'Error deleting data',
+    });
+  }
 };
+
