@@ -1,67 +1,119 @@
 const fs = require('fs');
 const Tour = require('../models/tourModel')
 
-// const tours = JSON.parse(
-//   fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`)
-// );
+class APIFeatures {
+  constructor(query,queryString){
+    this.query = query;
+    this.queryStr = queryString;
+  }
 
-// const testTour = new tour({
-//   name : "ENGLAND",
-//   price : 1900
+  filter() {
+    const queryObj = { ...this.queryStr };
+    const excludedFields = ['page','sort','limit','fields']
+    excludedFields.forEach(el => delete queryObj[el]);
+    let queryStr = JSON.stringify(queryObj);
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`); 
+    
+    this.query.find(JSON.parse(queryStr));
+  }
 
-// })
+  sort() {
+    if(this.query.sort) {
+      const sortBy = this.query.sort.split(',').join(' ');
+      this.query = this.query.sort(sortBy)
+     }else{
+      this.query = this.query.sort('-cretedAt');
+     }
 
+     return this;
+  }
 
-// testTour
-// .save()
-// .then((doc => {
-//   console.log(doc);
-// }))
-// .catch((error) => {
-//   console.log("Error",error);
-// })
+  limitFields() {
+    if(this.query.fields){
+      const fields = this.query.fields.split(',').join(' ');
+      this.query = this.query.select(fields)
+      
+     }else{
+      this.query = this.query.select('-__V');
+     }
 
+     return this;
+  }
 
+  paginate() {
+    const page = this.query.page * 1 || 1;
+     const limit = this.query.limit * 1 || 100;
+     const skip = (page - 1) * limit; // we have to skip 10 for a page
+
+    // page=3&limit=10, 1-10 ,page=1, 11-20, page2, 21-30, page3
+    this.query = this.query.skip(skip).limit(limit);
+
+   return this;
+  }
+
+}
+
+exports.aliasTopTours = (req,res,next) => {
+  req.query.limit = '5';
+  req.query.sort = '-ratingsAverage,price';
+  req.query.fields = 'name,price,ratingsAverage,summary,difficulty';
+  next();
+};
 
 // get allTours
 exports.getAllTours = async (req, res) => {
 
-  
-  
   try{
 
     // build query
     // 1A) Filtering
-    const queryObj = {...req.query}
-    const excludedFields = ['page','sort','limit','fields']
-    excludedFields.forEach(el => delete queryObj[el]); // loop to delete the excludedFields
+    // const queryObj = {...req.query}
+    // const excludedFields = ['page','sort','limit','fields']
+    // excludedFields.forEach(el => delete queryObj[el]); // loop to delete the excludedFields
     
     // 1B) Advanced filtering
-    let queryStr = JSON.stringify(queryObj);
-    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
+    // let queryStr = JSON.stringify(queryObj);
+    // queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
 
     // finding in database
-    let query = Tour.find(JSON.parse(queryStr))
+    // let query = Tour.find(JSON.parse(queryStr))
 
      // 2) Sorting
-     if(req.query.sort) {
-      const sortBy = req.query.sort.split(',').join(' ');
-      query = query.sort(sortBy)
-     }else{
-      query = query.sort('-cretedAt');
-     }
+    //  if(req.query.sort) {
+    //   const sortBy = req.query.sort.split(',').join(' ');
+    //   query = query.sort(sortBy)
+    //  }else{
+    //   query = query.sort('-cretedAt');
+    //  }
      
      // 3) Field limiting
-     if(req.query.fields){
-      const fields = req.query.fields.split(',').join(' ');
-      query = query.select(fields)
+    //  if(req.query.fields){
+    //   const fields = req.query.fields.split(',').join(' ');
+    //   query = query.select(fields)
       
-     }else{
-      query = query.select('-__V');
-     }
+    //  }else{
+    //   query = query.select('-__V');
+    //  }
+
+     // 4) pagination
+    //  const page = req.query.page * 1 || 1;
+    //  const limit = req.query.limit * 1 || 100;
+    //  const skip = (page - 1) * limit; // we have to skip 10 for a page
+
+    // page=3&limit=10, 1-10 ,page=1, 11-20, page2, 21-30, page3
+    // query = query.skip(skip).limit(limit);
+
+    // if (req.query.page){
+    //   const numTours = await Tour.countDocuments();
+    // }
   
     // execute query
-    const tours = await query;
+    const features = new APIFeatures(Tour.find(), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate();
+    const tours = await features.query;
     // console.log(req.query);
 
     // first solution of filter
