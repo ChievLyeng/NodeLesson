@@ -1,59 +1,9 @@
 const fs = require('fs');
 const Tour = require('../models/tourModel')
+const APIFeatures = require('../Utils/apiFeatures')
 
-class APIFeatures {
-  constructor(query,queryString){
-    this.query = query;
-    this.queryStr = queryString;
-  }
-
-  filter() {
-    const queryObj = { ...this.queryStr };
-    const excludedFields = ['page','sort','limit','fields']
-    excludedFields.forEach(el => delete queryObj[el]);
-    let queryStr = JSON.stringify(queryObj);
-    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`); 
-    
-    this.query.find(JSON.parse(queryStr));
-  }
-
-  sort() {
-    if(this.query.sort) {
-      const sortBy = this.query.sort.split(',').join(' ');
-      this.query = this.query.sort(sortBy)
-     }else{
-      this.query = this.query.sort('-cretedAt');
-     }
-
-     return this;
-  }
-
-  limitFields() {
-    if(this.query.fields){
-      const fields = this.query.fields.split(',').join(' ');
-      this.query = this.query.select(fields)
-      
-     }else{
-      this.query = this.query.select('-__V');
-     }
-
-     return this;
-  }
-
-  paginate() {
-    const page = this.query.page * 1 || 1;
-     const limit = this.query.limit * 1 || 100;
-     const skip = (page - 1) * limit; // we have to skip 10 for a page
-
-    // page=3&limit=10, 1-10 ,page=1, 11-20, page2, 21-30, page3
-    this.query = this.query.skip(skip).limit(limit);
-
-   return this;
-  }
-
-}
-
-exports.aliasTopTours = (req,res,next) => {
+// alias middleware
+const aliasTopTours = (req,res,next) => {
   req.query.limit = '5';
   req.query.sort = '-ratingsAverage,price';
   req.query.fields = 'name,price,ratingsAverage,summary,difficulty';
@@ -61,52 +11,10 @@ exports.aliasTopTours = (req,res,next) => {
 };
 
 // get allTours
-exports.getAllTours = async (req, res) => {
+const getAllTours = async (req, res) => {
 
   try{
 
-    // build query
-    // 1A) Filtering
-    // const queryObj = {...req.query}
-    // const excludedFields = ['page','sort','limit','fields']
-    // excludedFields.forEach(el => delete queryObj[el]); // loop to delete the excludedFields
-    
-    // 1B) Advanced filtering
-    // let queryStr = JSON.stringify(queryObj);
-    // queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
-
-    // finding in database
-    // let query = Tour.find(JSON.parse(queryStr))
-
-     // 2) Sorting
-    //  if(req.query.sort) {
-    //   const sortBy = req.query.sort.split(',').join(' ');
-    //   query = query.sort(sortBy)
-    //  }else{
-    //   query = query.sort('-cretedAt');
-    //  }
-     
-     // 3) Field limiting
-    //  if(req.query.fields){
-    //   const fields = req.query.fields.split(',').join(' ');
-    //   query = query.select(fields)
-      
-    //  }else{
-    //   query = query.select('-__V');
-    //  }
-
-     // 4) pagination
-    //  const page = req.query.page * 1 || 1;
-    //  const limit = req.query.limit * 1 || 100;
-    //  const skip = (page - 1) * limit; // we have to skip 10 for a page
-
-    // page=3&limit=10, 1-10 ,page=1, 11-20, page2, 21-30, page3
-    // query = query.skip(skip).limit(limit);
-
-    // if (req.query.page){
-    //   const numTours = await Tour.countDocuments();
-    // }
-  
     // execute query
     const features = new APIFeatures(Tour.find(), req.query)
     .filter()
@@ -114,22 +22,7 @@ exports.getAllTours = async (req, res) => {
     .limitFields()
     .paginate();
     const tours = await features.query;
-    // console.log(req.query);
 
-    // first solution of filter
-    // const tours = await Tour.find({
-    //   duration: 5,
-    //   difficulty: 'easy'
-    // });
-
-    // second solution of filter
-    // const tours = await Tour.find()
-    // .where('duration')
-    // .equals(5)
-    // .where('difficulty')
-    // .equals('easy')
-
-    
     // send response
     res.status(200).json({
       status: 'success',
@@ -150,7 +43,7 @@ exports.getAllTours = async (req, res) => {
 };
 
 // get single Tour
-exports.getTour = async (req, res) => {
+const getTour = async (req, res) => {
   
   try{
     const tour = await Tour.findById(req.params.id);
@@ -174,7 +67,7 @@ exports.getTour = async (req, res) => {
 };
 
 // create Tour
-exports.createTour = async (req, res) => {
+const createTour = async (req, res) => {
   try{
     // console.log(req.body);
   
@@ -195,7 +88,7 @@ exports.createTour = async (req, res) => {
 };
 
 // update single tour
-exports.updateTour = async (req, res) => {
+const updateTour = async (req, res) => {
   try{
       const tour = await Tour.findByIdAndUpdate(req.params.id, req.body,{
         new : true,
@@ -218,7 +111,7 @@ exports.updateTour = async (req, res) => {
 };
 
 //delete
-exports.deleteTour = async (req, res) => {
+const deleteTour = async (req, res) => {
   try {
     const tour = await Tour.findByIdAndDelete(req.params.id);
 
@@ -242,4 +135,70 @@ exports.deleteTour = async (req, res) => {
     });
   }
 };
+
+const getTourStats = async (req,res) => {
+  try{
+    // aggregation pipe line
+    const stats = await Tour.aggregate([
+      {
+        $match: { ratingsAverage : { $gte : 4.5 }}
+      },
+      {
+        $group: {
+          // _id: null, // not group
+          _id: {$toUpper : '$difficulty'}, // we can use the toUpper to convert the request
+          // _id: '$ratingsAverage', // this group by difficulty 
+          numTours: {$sum : 1}, // add document one by one
+          numRatings: { $sum: '$ratingsQuantity'},
+          avgRating: { $avg: '$ratingsAverage'},
+          avgPrice: { $avg: '$price'},
+          minPrice: { $min: '$price'},
+          maxPrice: { $max: '$price'},
+          sumPrice: { $sum: '$price'},
+        },
+      },
+      {
+        $sort : { avgPrice: 1 }
+      },
+      // {
+      //   $match: { _id: {$ne: 'EASY'}}
+      // }
+    ]) 
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        stats // Return the deleted tour data
+      },
+    });
+
+  }catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: 'Error deleting data',
+    });
+  }
+}
+
+const getMonthlyPlan = async (req,res) => {
+  try{
+
+  }catch(err){
+    res.status(400).json({
+      status: 'fail',
+      message: 'Error deleting data',
+    });
+  }
+}
+
+module.exports = {
+  getAllTours,
+  getTour,
+  createTour,
+  updateTour,
+  deleteTour,
+  aliasTopTours,
+  getTourStats,
+  getMonthlyPlan
+}
 
