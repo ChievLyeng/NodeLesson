@@ -58,6 +58,22 @@ const tourSchema = new mongoose.Schema({
     startDates :{
         type: [Date],
     }
+},{
+    toJSON: {virtuals: true},
+    toObject: {virtuals: true}
 });
+
+tourSchema.virtual('durationsWeeks').get(function(){
+    return this.duration / 7
+})
+
+tourSchema.virtual('DoublePrice').get(function(){
+    return this.price * 2
+})
+
+// document middleware: runs before .save() and .create() but no insertMany()
+tourSchema.pre('save', function(){
+    console.log(this); // t
+})  
 
 module.exports = mongoose.model('Tour',tourSchema);
