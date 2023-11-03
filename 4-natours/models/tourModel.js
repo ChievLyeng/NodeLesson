@@ -135,14 +135,12 @@ tourSchema.pre(/^find/,function(next){
 // this run after the query done so it can access to docs
 tourSchema.post(/^find/,function(docs,next){
     console.log(`Query tood ${Date.now() - this.start} milliseconds!`)
-    console.log(docs);
     next();
 })
 
 //Aggregation middleware
 tourSchema.pre('aggregate',function(next){
-    this.pipeline().unshift({ $match: {secretTour: { $ne: true } } })
-    console.log(this.pipeline()); // it point to current aggregation object
+    this.pipeline().unshift({ $match: {secretTour: { $ne: true } } }) // it point to current aggregation object
     next();
 })
 

@@ -24,4 +24,3 @@ mongoose.connect(process.env.DB,{
 .catch((error) => {
   console.log("Failed to connect to the database!",error);
 })
-
