@@ -47,7 +47,7 @@ else if(process.argv[2] === '--delete'){
   deleteData();
 }
 
-// node dev-data/data/import-dev-data.js
+// node dev-data/data/import-dev-data.js    
 // node dev-data/data/import-dev-data.js --import
 // node dev-data/data/import-dev-data.js --delete
 console.log(process.argv);

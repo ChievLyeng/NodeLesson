@@ -1,5 +1,7 @@
 const express = require('express');
 const morgan = require('morgan');
+const AppError = require('./Utils/appError')
+const globalErroHandler = require('./controllers/errorController')
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 
@@ -23,10 +25,18 @@ app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 
 app.all('*',(req,res,next) => {
-  res.status(404).json({
-    status:'fail',
-    message: `Cannot find ${req.originalUrl} on this server!`
-  });
+  // res.status(404).json({
+  //   status:'fail',
+  //   message: `Cannot find ${req.originalUrl} on this server!`
+  // });
+
+  // const err = new Error (`Cant't find ${req.originalUrl} on this server!`)
+  // err.status = 'fail';
+  // err.statusCode = 400
+
+  next(new AppError(`Cant't find ${req.originalUrl} on this server!`,404));
 }); // use .all it will work with http request (get,post,delete,patch)
+
+app.use(globalErroHandler);
 
 module.exports = app;
