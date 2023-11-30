@@ -15,12 +15,11 @@ mongoose.connect(process.env.DB,{
 .then((con) => {
   console.log("Connected to Database!!!");
   // console.log(con);
-
-  app.listen(process.env.PORT, () => {
-    console.log(`App running on port ${process.env.PORT}...`);
-  });
-  
 })
 .catch((error) => {
   console.log("Failed to connect to the database!",error);
 })
+
+app.listen(process.env.PORT, () => {
+  console.log(`App running on port ${process.env.PORT}...`);
+});
